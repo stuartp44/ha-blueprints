@@ -1,0 +1,169 @@
+blueprint:
+  name: Bike Charger Control with Price Filter and Time Window
+  description: Automate the bike battery charging process based on bike presence, power usage, electricity prices, and a specified time window.
+  domain: automation
+  input:
+    plug:
+      name: Bike Charger Plug
+      description: The smart plug controlling the bike charger
+      selector:
+        entity:
+          domain: switch
+    power_usage_sensor:
+      name: Power Usage Sensor
+      description: The sensor that measures the power usage of the plug
+      selector:
+        entity:
+          domain: sensor
+          device_class: power
+    presence_sensor:
+      name: Presence Sensor
+      description: Sensor indicating if the bike is present
+      selector:
+        entity:
+          domain: binary_sensor
+    electricity_price_sensor:
+      name: Electricity Price Sensor
+      description: Sensor that provides the current electricity price
+      selector:
+        entity:
+          domain: sensor
+          device_class: monetary
+    price_threshold:
+      name: Price Threshold
+      description: The maximum electricity price to allow charging (in your currency)
+      default: 0.10
+      selector:
+        number:
+          min: 0
+          max: 1
+          unit_of_measurement: 'currency'
+    start_time:
+      name: Start Time
+      description: The start time for the allowed charging window
+      selector:
+        time:
+    end_time:
+      name: End Time
+      description: The end time for the allowed charging window
+      selector:
+        time:
+    power_threshold_spike:
+      name: Power Spike Threshold
+      description: The power usage threshold to determine if the bike is docked (in watts)
+      default: 50
+      selector:
+        number:
+          min: 0
+          max: 1000
+          unit_of_measurement: W
+    power_threshold_idle:
+      name: Power Idle Threshold
+      description: The power usage threshold to determine if the bike is fully charged (in watts)
+      default: 10
+      selector:
+        number:
+          min: 0
+          max: 100
+          unit_of_measurement: W
+    power_drop_duration:
+      name: Power Drop Duration
+      description: Duration in minutes to consider the bike fully charged when power usage drops below threshold
+      default: 5
+      selector:
+        number:
+          min: 1
+          max: 60
+          unit_of_measurement: minutes
+
+variables:
+  plug: !input plug
+  power_usage_sensor: !input power_usage_sensor
+  presence_sensor: !input presence_sensor
+  electricity_price_sensor: !input electricity_price_sensor
+  price_threshold: !input price_threshold
+  start_time: !input start_time
+  end_time: !input end_time
+  power_threshold_spike: !input power_threshold_spike
+  power_threshold_idle: !input power_threshold_idle
+  power_drop_duration: !input power_drop_duration
+
+trigger:
+  - platform: state
+    entity_id: !input presence_sensor
+    to: 'on'
+  - platform: state
+    entity_id: !input presence_sensor
+    to: 'off'
+  - platform: numeric_state
+    entity_id: !input power_usage_sensor
+    above: !input power_threshold_spike
+  - platform: numeric_state
+    entity_id: !input power_usage_sensor
+    below: !input power_threshold_idle
+    for:
+      minutes: !input power_drop_duration
+  - platform: time
+    at: !input start_time
+  - platform: time
+    at: !input end_time
+
+condition:
+  - condition: or
+    conditions:
+      - condition: and
+        conditions:
+          - condition: state
+            entity_id: !input presence_sensor
+            state: 'on'
+          - condition: numeric_state
+            entity_id: !input electricity_price_sensor
+            below: !input price_threshold
+          - condition: time
+            after: !input start_time
+            before: !input end_time
+      - condition: and
+        conditions:
+          - condition: numeric_state
+            entity_id: !input power_usage_sensor
+            above: !input power_threshold_spike
+      - condition: and
+        conditions:
+          - condition: numeric_state
+            entity_id: !input power_usage_sensor
+            below: !input power_threshold_idle
+            for:
+              minutes: !input power_drop_duration
+
+action:
+  - choose:
+      - conditions:
+          - condition: and
+            conditions:
+              - condition: state
+                entity_id: !input presence_sensor
+                state: 'on'
+              - condition: numeric_state
+                entity_id: !input electricity_price_sensor
+                below: !input price_threshold
+              - condition: time
+                after: !input start_time
+                before: !input end_time
+        sequence:
+          - service: switch.turn_on
+            target:
+              entity_id: !input plug
+      - conditions:
+          - condition: and
+            conditions:
+              - condition: numeric_state
+                entity_id: !input power_usage_sensor
+                below: !input power_threshold_idle
+                for:
+                  minutes: !input power_drop_duration
+        sequence:
+          - service: switch.turn_off
+            target:
+              entity_id: !input plug
+
+mode: single
