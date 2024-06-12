@@ -1,6 +1,7 @@
 blueprint:
   name: Bike Charger Control with Price Filter and Time Window
   description: Automate the bike battery charging process based on bike presence, power usage, electricity prices, and a specified time window.
+  source_url: https://github.com/stuartp44/ha-blueprints/bike-charger/bike-charger.yml
   domain: automation
   input:
     plug:
