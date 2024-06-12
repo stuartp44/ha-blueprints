@@ -29,7 +29,6 @@ blueprint:
       selector:
         entity:
           domain: sensor
-          device_class: monetary
     price_threshold:
       name: Price Threshold
       description: The maximum electricity price to allow charging (in your currency)
@@ -77,15 +76,15 @@ blueprint:
           max: 60
           unit_of_measurement: minutes
     temperature_sensor:
-      name: Temperature Sensor
-      description: Sensor to measure the temperature (optional)
+      name: Temperature Sensor (Optional)
+      description: Sensor to measure the temperature (leave blank if not used)
       selector:
         entity:
           domain: sensor
           device_class: temperature
       default: ''
     temperature_threshold:
-      name: Temperature Threshold
+      name: Temperature Threshold (Optional)
       description: Minimum temperature to allow charging (in °C)
       default: 10
       selector:
@@ -139,7 +138,7 @@ condition:
             after: !input start_time
             before: !input end_time
           - condition: template
-            value_template: "{{ states(temperature_sensor) | float >= temperature_threshold }}"
+            value_template: "{{ not temperature_sensor or states(temperature_sensor) | float >= temperature_threshold }}"
       - condition: and
         conditions:
           - condition: numeric_state
@@ -168,7 +167,7 @@ action:
                 after: !input start_time
                 before: !input end_time
               - condition: template
-                value_template: "{{ states(temperature_sensor) | float >= temperature_threshold }}"
+                value_template: "{{ not temperature_sensor or states(temperature_sensor) | float >= temperature_threshold }}"
         sequence:
           - service: switch.turn_on
             target:
