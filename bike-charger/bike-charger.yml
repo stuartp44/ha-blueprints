@@ -19,10 +19,10 @@ blueprint:
           device_class: power
     presence_sensor:
       name: Presence Sensor
-      description: Sensor indicating if the bike is present
+      description: Device tracker indicating if the bike is present
       selector:
         entity:
-          domain: binary_sensor
+          domain: device_tracker
     electricity_price_sensor:
       name: Electricity Price Sensor
       description: Sensor that provides the current electricity price
@@ -76,6 +76,23 @@ blueprint:
           min: 1
           max: 60
           unit_of_measurement: minutes
+    temperature_sensor:
+      name: Temperature Sensor
+      description: Sensor to measure the temperature (optional)
+      selector:
+        entity:
+          domain: sensor
+          device_class: temperature
+      default: ''
+    temperature_threshold:
+      name: Temperature Threshold
+      description: Minimum temperature to allow charging (in °C)
+      default: 10
+      selector:
+        number:
+          min: -30
+          max: 50
+          unit_of_measurement: °C
 
 variables:
   plug: !input plug
@@ -88,14 +105,12 @@ variables:
   power_threshold_spike: !input power_threshold_spike
   power_threshold_idle: !input power_threshold_idle
   power_drop_duration: !input power_drop_duration
+  temperature_sensor: !input temperature_sensor
+  temperature_threshold: !input temperature_threshold
 
 trigger:
   - platform: state
     entity_id: !input presence_sensor
-    to: 'on'
-  - platform: state
-    entity_id: !input presence_sensor
-    to: 'off'
   - platform: numeric_state
     entity_id: !input power_usage_sensor
     above: !input power_threshold_spike
@@ -116,13 +131,15 @@ condition:
         conditions:
           - condition: state
             entity_id: !input presence_sensor
-            state: 'on'
+            state: 'home'
           - condition: numeric_state
             entity_id: !input electricity_price_sensor
             below: !input price_threshold
           - condition: time
             after: !input start_time
             before: !input end_time
+          - condition: template
+            value_template: "{{ states(temperature_sensor) | float >= temperature_threshold }}"
       - condition: and
         conditions:
           - condition: numeric_state
@@ -143,13 +160,15 @@ action:
             conditions:
               - condition: state
                 entity_id: !input presence_sensor
-                state: 'on'
+                state: 'home'
               - condition: numeric_state
                 entity_id: !input electricity_price_sensor
                 below: !input price_threshold
               - condition: time
                 after: !input start_time
                 before: !input end_time
+              - condition: template
+                value_template: "{{ states(temperature_sensor) | float >= temperature_threshold }}"
         sequence:
           - service: switch.turn_on
             target:
