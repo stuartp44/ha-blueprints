@@ -1,0 +1,139 @@
+blueprint:
+  name: Charge Batteries at Cheapest Time
+  description: Charge batteries using Tibber's cheapest time slots, triggered by Ikea remote or energy sensor, with customizable settings and JSON-based storage in a text helper.
+  domain: automation
+  input:
+    ikea_remote:
+      name: Ikea Remote
+      description: The Ikea remote to trigger the charging requirement.
+      selector:
+        device:
+          integration: deconz
+          manufacturer: IKEA of Sweden
+    socket_entity:
+      name: Socket Energy Sensor
+      description: The energy sensor of the socket that detects when the socket turns on.
+      selector:
+        entity:
+          domain: sensor
+    tibber_sensor:
+      name: Tibber Price Sensor
+      description: Tibber energy price sensor to determine the cheapest charging time.
+      selector:
+        entity:
+          domain: sensor
+          device_class: monetary
+    text_helper:
+      name: Text Helper for JSON Storage
+      description: A text helper to store temporary data in JSON format.
+      selector:
+        entity:
+          domain: input_text
+    power_threshold:
+      name: Power Threshold (W)
+      description: The power consumption below which to stop charging.
+      default: 5
+      selector:
+        number:
+          min: 1
+          max: 100
+          unit_of_measurement: W
+    duration_threshold:
+      name: Duration Threshold (minutes)
+      description: The duration of low power consumption to stop charging.
+      default: 10
+      selector:
+        number:
+          min: 1
+          max: 60
+          unit_of_measurement: minutes
+    charging_duration:
+      name: Charging Duration (minutes)
+      description: The maximum duration of charging.
+      default: 120
+      selector:
+        number:
+          min: 1
+          max: 240
+          unit_of_measurement: minutes
+
+trigger:
+  - platform: event
+    event_type: deconz_event
+    event_data:
+      id: !input ikea_remote
+  - platform: state
+    entity_id: !input socket_entity
+    to: 'on'
+
+condition: []
+
+action:
+  - variables:
+      tibber_prices: "{{ states('!input tibber_sensor') | from_json }}"
+      text_storage: "{{ states('!input text_helper') }}"
+      power_threshold: !input power_threshold
+      duration_threshold: !input duration_threshold
+      charging_duration: !input charging_duration
+
+  - choose:
+      - conditions:
+          - "{{ text_storage == '' }}"
+        sequence:
+          - service: input_text.set_value
+            target:
+              entity_id: !input text_helper
+            data:
+              value: >
+                {{
+                  {
+                    "charging": false,
+                    "charging_start": null,
+                    "charging_end": null
+                  } | to_json
+                }}
+
+  - choose:
+      - conditions:
+          - "{{ text_storage | from_json().charging == false }}"
+        sequence:
+          - service: input_text.set_value
+            target:
+              entity_id: !input text_helper
+            data:
+              value: >
+                {{
+                  {
+                    "charging": true,
+                    "charging_start": now(),
+                    "charging_end": now() + timedelta(minutes=charging_duration)
+                  } | to_json
+                }}
+
+          - service: notify.notify
+            data:
+              message: "Battery charging started."
+
+  - choose:
+      - conditions:
+          - condition: template
+            value_template: "{{ states('!input socket_entity') | int < power_threshold }}"
+          - condition: template
+            value_template: "{{ as_timestamp(now()) - as_timestamp(states('!input text_helper') | from_json().charging_start) > duration_threshold * 60 }}"
+        sequence:
+          - service: input_text.set_value
+            target:
+              entity_id: !input text_helper
+            data:
+              value: >
+                {{
+                  {
+                    "charging": false,
+                    "charging_start": null,
+                    "charging_end": null
+                  } | to_json
+                }}
+
+          - service: notify.notify
+            data:
+              message: "Battery charging stopped."
