@@ -1,7 +1,7 @@
 blueprint:
   name: UniFi Protect Doorbell Ring Notifications
   domain: automation
-  source_url: https://raw.githubusercontent.com/stuartp44/ha-blueprints/refs/heads/main/unifi-protect/on-doorbell.yml
+  source_url: https://raw.githubusercontent.com/stuartp44/ha-blueprints/refs/heads/main/unifi-protect/on-doorbell.yaml
   description: "## UniFi Protect Doorbell Ring Notifications\n\nThis blueprint will
     send push notifications to a Home Assistant mobile app when a doorbell ring is
     detected.\n\n### Required Settings\n\n  - UniFi Protect Doorbell Sensor\n\n###
