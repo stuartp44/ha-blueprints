@@ -44,12 +44,14 @@ sensor:
   - platform: kamstrup_kmp
     heat_energy:
       name: 'Heat Energy'
+      id: 'heat_energy_gj'
     power:
       name: 'Heat Power'
     temp_diff:
       name: 'Heat Temperature Difference'
     flow:
       name: 'Heat Flow'
+      state_class: measurement
     custom:
       - name: City Heat Meter Reading
         command: 0x003C
@@ -95,3 +97,16 @@ sensor:
         state_class: "total_increasing"
         accuracy_decimals: 0
     update_interval: 30s
+  - platform: template
+    name: "Estimated Gas Volume"
+    unit_of_measurement: "m³"
+    device_class: gas
+    state_class: total_increasing
+    accuracy_decimals: 2
+    lambda: |-
+      if (isnan(id(heat_energy_gj).state)) {
+        return NAN;
+      }
+      const float MJ_PER_M3 = 39.0;
+      float mj = id(heat_energy_gj).state * 1000.0;  // Convert GJ to MJ
+      return mj / MJ_PER_M3;
