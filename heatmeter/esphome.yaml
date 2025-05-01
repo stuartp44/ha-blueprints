@@ -11,6 +11,8 @@ esphome:
     name: city-heat-meter
     version: "1.0"
 
+esp8266:
+
 logger:
 
 api:
