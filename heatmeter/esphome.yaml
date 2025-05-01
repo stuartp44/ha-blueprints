@@ -1,0 +1,94 @@
+substitutions:
+  name: "city-heat-meter"
+  friendly_name: "Kamstrup 403 Heat Meter Reader"
+
+esphome:
+  name: "${name}"
+  friendly_name: "${friendly_name}"
+  name_add_mac_suffix: true
+
+  project:
+    name: city-heat-meter
+    version: "1.0"
+
+logger:
+
+api:
+
+ota:
+  platform: esphome
+
+dashboard_import:
+  package_import_url: github://stuartp44/ha-blueprints/heatmeter/esphome.yaml
+  import_full_config: false # or true
+
+wifi:
+  ap:
+    password: "12345678"
+
+captive_portal:
+
+web_server:
+  port: 80
+
+uart:
+  baud_rate: 1200
+  stop_bits: 2
+  tx_pin: GPIO15
+  rx_pin: GPIO13
+
+sensor:
+  - platform: kamstrup_kmp
+    heat_energy:
+      name: 'Heat Energy'
+    power:
+      name: 'Heat Power'
+    temp_diff:
+      name: 'Heat Temperature Difference'
+    flow:
+      name: 'Heat Flow'
+    custom:
+      - name: City Heat Meter Reading
+        command: 0x003C
+        unit_of_measurement: "m³"
+        icon: "mdi:gas-cylinder"
+        device_class: "gas"
+        state_class: "total_increasing"
+        accuracy_decimals: 3
+      - name: Temp1
+        command: 0x0056
+        unit_of_measurement: "°C"
+        icon: "mdi:thermometer"
+        device_class: "temperature"
+        state_class: "measurement"
+      - name: Temp2
+        command: 0x0057
+        unit_of_measurement: "°C"
+        icon: "mdi:thermometer"
+        device_class: "temperature"
+        state_class: "measurement"
+      - name: Infoevent
+        command: 0x0063
+        icon: "mdi:eye"
+        entity_category: "diagnostic"
+        state_class: "measurement"
+        accuracy_decimals: 0
+      - name: Infoevent counter
+        command: 0x0071
+        icon: "mdi:eye"
+        entity_category: "diagnostic"
+        state_class: "measurement"
+        accuracy_decimals: 0
+      - name: Serial number
+        command: 0x03E9
+        icon: "mdi:barcode"
+        entity_category: "diagnostic"
+        state_class: "measurement"
+        accuracy_decimals: 0
+      - name: HourCounter
+        command: 0x03EC
+        icon: "mdi:timer-sand"
+        entity_category: "diagnostic"
+        state_class: "total_increasing"
+        accuracy_decimals: 0
+    update_interval: 30s
