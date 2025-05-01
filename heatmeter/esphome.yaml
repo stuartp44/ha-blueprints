@@ -93,7 +93,6 @@ sensor:
   - platform: template
     name: "Estimated Gas Volume"
     unit_of_measurement: "m³"
-    icon: "mdi:gas-cylinder"
     device_class: gas
     state_class: total_increasing
     accuracy_decimals: 2
