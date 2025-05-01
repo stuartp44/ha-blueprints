@@ -8,10 +8,11 @@ esphome:
   name_add_mac_suffix: true
 
   project:
-    name: city-heat-meter
+    name: "stuartp44.heatmeter"
     version: "1.0"
 
 esp8266:
+  board: d1_mini
 
 logger:
 
